@@ -62,8 +62,9 @@
 - tx_hash: VARCHAR(255) UNIQUE - хеш транзакции в блокчейне
 - confirmations: INT DEFAULT 0 - количество подтверждений
 - required_confirmations: INT DEFAULT 1 - требуемое количество подтверждений
-- confirmed: BOOLEAN DEFAULT FALSE - транзакция подтверждена
-- failed: BOOLEAN DEFAULT FALSE - транзакция провалена
+- success: BOOLEAN DEFAULT FALSE — успешно обработано  
+- final: BOOLEAN DEFAULT FALSE — успешно обработано  
+- failed: BOOLEAN DEFAULT FALSE — успешно обработано  
 - created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 - updated_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 - locked_until: TIMESTAMP NULL - блокировка записи для обработки
@@ -80,13 +81,30 @@
 - locked_until: TIMESTAMP NULL - блокировка записи для обработки
 - INDEX idx_currency_active (currency_id, active)
 
-### processing_queue
-- id: BIGINT PRIMARY KEY AUTO_INCREMENT
-- table_name: VARCHAR(50) NOT NULL - имя таблицы (orders, transactions)
-- record_id: BIGINT NOT NULL - ID записи
-- event_type: VARCHAR(100) NOT NULL - тип события
-- processed: BOOLEAN DEFAULT FALSE
-- created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-- processed_at: TIMESTAMP NULL
-- INDEX idx_processed_created (processed, created_at)
-- INDEX idx_table_record (table_name, record_id)
+### processing
+- id: BIGINT PRIMARY KEY AUTO_INCREMENT  
+- transaction_id: BIGINT NOT NULL — FOREIGN KEY transactions(id)  
+- success: BOOLEAN DEFAULT FALSE — успешно обработано  
+- final: BOOLEAN DEFAULT FALSE — успешно обработано  
+- failed: BOOLEAN DEFAULT FALSE — успешно обработано  
+- processed: BOOLEAN DEFAULT FALSE — успешно обработано  
+- last_try_at: TIMESTAMP NULL — время последней попытки  
+- error_message: TEXT NULL — сообщение об ошибке последней попытки  
+- created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP  
+- processed_at: TIMESTAMP NULL — когда задача была успешно завершена  
+- INDEX idx_processed_created (processed, created_at)  
+
+### attempts
+- id: BIGINT PRIMARY KEY AUTO_INCREMENT  
+- processing_id: BIGINT NOT NULL — FOREIGN KEY processing(id)  
+- attempt_no: INT NOT NULL — номер попытки (начиная с 1)  
+- success: BOOLEAN DEFAULT FALSE — успешно обработано  
+- final: BOOLEAN DEFAULT FALSE — успешно обработано  
+- failed: BOOLEAN DEFAULT FALSE — успешно обработано 
+- error_message: TEXT — сообщение об ошибке, если неуспешно  
+- duration_ms: INT — длительность выполнения попытки в миллисекундах  
+- locked_until: TIMESTAMP NULL — блокировка записи для фоновой обработки  
+- created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP  
+- updated_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP  
+- FOREIGN KEY (processing_id) REFERENCES processing(id)  
+- UNIQUE (processing_id, attempt_no) — гарантирует, что попытки не повторяются по счёту  
